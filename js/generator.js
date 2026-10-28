@@ -81,23 +81,49 @@
     return keys.filter((k) => DATA.GENRES[k]);
   }
 
+  function availableFor(item, medium) {
+    return !item.media || !medium || item.media.includes(medium);
+  }
+
+  // [key, genre] pairs offered for a medium.
+  function genresFor(medium) {
+    return Object.entries(DATA.GENRES).filter(([, g]) => availableFor(g, medium));
+  }
+
+  function tonesFor(medium) {
+    return DATA.TONES.filter((t) => availableFor(t, medium));
+  }
+
+  function toneHint(name) {
+    const tone = DATA.TONES.find((t) => t.name === name);
+    return tone ? tone.hint : "";
+  }
+
+  // Lean on a genre's own material (e.g. psychological-horror protagonists)
+  // when it has some, falling back to the shared pool.
+  function flavoredPick(rng, options, key, base) {
+    const extras = genreKeys(options).flatMap((k) => DATA.GENRES[k][key] || []);
+    const useExtras = rng() < 0.6;
+    return pick(rng, useExtras && extras.length ? extras : base);
+  }
+
   const FIELD_GENERATORS = {
     protagonistName: (rng) => makeName(rng),
-    protagonist: (rng) => pick(rng, DATA.PROTAGONISTS),
+    protagonist: (rng, options) => flavoredPick(rng, options, "protagonists", DATA.PROTAGONISTS),
     want: (rng) => pick(rng, DATA.WANTS),
     need: (rng) => pick(rng, DATA.NEEDS),
     flaw: (rng) => pick(rng, DATA.FLAWS),
     antagonistName: (rng) => makeName(rng),
-    antagonist: (rng) => pick(rng, DATA.ANTAGONISTS),
+    antagonist: (rng, options) => flavoredPick(rng, options, "antagonists", DATA.ANTAGONISTS),
     setting: (rng, options) => {
       const keys = genreKeys(options);
       const settings = keys.flatMap((k) => DATA.GENRES[k].settings);
       return pick(rng, settings);
     },
-    inciting: (rng) => pick(rng, DATA.INCITING),
+    inciting: (rng, options) => flavoredPick(rng, options, "inciting", DATA.INCITING),
     conflict: (rng) => pick(rng, DATA.CONFLICTS),
-    stakes: (rng) => pick(rng, DATA.STAKES),
-    twist: (rng) => pick(rng, DATA.TWISTS),
+    stakes: (rng, options) => flavoredPick(rng, options, "stakes", DATA.STAKES),
+    twist: (rng, options) => flavoredPick(rng, options, "twists", DATA.TWISTS),
     theme: (rng) => pick(rng, DATA.THEMES),
     mutator: (rng) => pick(rng, DATA.MUTATORS),
   };
@@ -253,7 +279,8 @@
   function gameOutline(c, rng) {
     const f = c.fields;
     const loop = DATA.GAME.loops[c.genre] || DATA.GAME.loops.fantasy;
-    const hooks = sample(rng, DATA.GAME.mechanicsHooks, 2);
+    const genreHooks = genreKeys(c).flatMap((k) => DATA.GAME.genreMechanics[k] || []);
+    const hooks = sample(rng, genreHooks, 1).concat(sample(rng, DATA.GAME.mechanicsHooks, 2)).slice(0, 2);
     const endings = sample(rng, DATA.GAME.endings, 3);
     const sides = sample(rng, DATA.GAME.sideQuests, 3);
     const lieutenant = c.cast.find((m) => m.role === "Lieutenant");
@@ -300,7 +327,8 @@
     lines.push("");
     lines.push("**Medium:** " + MEDIUM_LABELS[c.medium] + "  ");
     lines.push("**Genre:** " + genreLabel(c) + "  ");
-    lines.push("**Tone:** " + c.tone + "  ");
+    const hint = toneHint(c.tone);
+    lines.push("**Tone:** " + c.tone + (hint ? " (" + hint.replace(/\.$/, "") + ")" : "") + "  ");
     if (c.seed) lines.push("**Seed:** `" + c.seed + "`");
     lines.push("");
     lines.push("## Logline");
@@ -335,7 +363,7 @@
   }
 
   const API = {
-    FIELDS, FIELD_LABELS, MEDIUM_LABELS, createRng, randomSeed, generateConcept,
+    FIELDS, FIELD_LABELS, MEDIUM_LABELS, genresFor, tonesFor, toneHint, createRng, randomSeed, generateConcept,
     generateField, generateCast, logline, tropeRadar, buildOutline, toMarkdown, genreLabel,
   };
 

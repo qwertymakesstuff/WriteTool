@@ -73,3 +73,42 @@ test("markdown export includes the key sections", () => {
   for (const s of ["# Last Light", "## Logline", "## Story bible", "## Supporting cast", "## Outline", "## Notes"]) assert.ok(md.includes(s), s);
   assert.ok(!md.includes("undefined"));
 });
+
+test("genres and tones are filtered by medium", () => {
+  const keys = (medium) => W.genresFor(medium).map(([k]) => k);
+  assert.ok(keys("game").includes("psychhorror"));
+  assert.ok(keys("game").includes("fantasy"), "shared genres are offered everywhere");
+  assert.ok(!keys("game").includes("procedural"));
+  assert.ok(keys("tv").includes("procedural"));
+  assert.ok(!keys("tv").includes("adventure"));
+  const tones = (medium) => W.tonesFor(medium).map((t) => t.name);
+  assert.ok(tones("game").includes("Oppressive"));
+  assert.ok(!tones("game").includes("Soapy"));
+  assert.ok(tones("tv").includes("Soapy"));
+  assert.ok(tones("film").includes("Grim"));
+});
+
+test("every genre and tone is complete", () => {
+  for (const [k, g] of Object.entries(D.GENRES)) {
+    assert.ok(g.label && g.settings.length >= 4 && g.tropes.length >= 3, k);
+    for (const m of g.media || []) assert.ok(["film", "tv", "game"].includes(m), k + " has unknown medium " + m);
+  }
+  for (const t of D.TONES) assert.ok(t.name && t.hint, JSON.stringify(t));
+});
+
+test("every genre offered for games has a core loop", () => {
+  for (const [k] of W.genresFor("game")) assert.ok(D.GAME.loops[k], "missing loop for " + k);
+});
+
+test("psychological horror games use genre-specific material", () => {
+  const protagonists = new Set();
+  const mechanics = new Set();
+  for (let i = 0; i < 40; i++) {
+    const c = W.generateConcept({ medium: "game", genre: "psychhorror", tone: "Paranoid", seed: "ph" + i });
+    protagonists.add(c.fields.protagonist);
+    mechanics.add(W.buildOutline(c)[0].beats[1].text);
+  }
+  assert.ok(D.GENRES.psychhorror.protagonists.some((p) => protagonists.has(p)));
+  const genreHooks = D.GAME.genreMechanics.psychhorror.map((h) => h.charAt(0).toUpperCase() + h.slice(1) + ".");
+  assert.ok([...mechanics].every((m) => genreHooks.includes(m)), "signature mechanic should come from the genre");
+});

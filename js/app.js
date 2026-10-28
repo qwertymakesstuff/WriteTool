@@ -69,19 +69,51 @@
   }
 
   // ---------- rendering ----------
-  function populateSelects() {
-    const genres = Object.entries(D.GENRES);
-    $("genre").replaceChildren(...genres.map(([k, g]) => el("option", { value: k, textContent: g.label })));
-    $("blend").replaceChildren(el("option", { value: "", textContent: "(none)" }), ...genres.map(([k, g]) => el("option", { value: k, textContent: g.label })));
-    $("tone").replaceChildren(...D.TONES.map((t) => el("option", { value: t, textContent: t })));
+  const MEDIUM_PLURALS = { film: "films", tv: "TV series", game: "video games" };
+
+  // Options grouped into ones made for this medium and ones shared by all.
+  function groupedOptions(medium, items) {
+    const special = items.filter((i) => i.media);
+    const shared = items.filter((i) => !i.media);
+    const group = (label, list) => el("optgroup", { label }, list.map((i) => el("option", { value: i.value, textContent: i.label })));
+    return [group("Made for " + MEDIUM_PLURALS[medium], special), group("All media", shared)].filter((g) => g.children.length);
+  }
+
+  // Set a select's value, falling back to its first option when the value
+  // isn't offered (e.g. a genre that doesn't exist for this medium).
+  function setSelect(id, value) {
+    const select = $(id);
+    select.value = value;
+    if (select.value !== value) select.selectedIndex = 0;
+    return select.value;
+  }
+
+  // Fill the genre, blend, and tone selects for a medium, keeping the current
+  // choices where they are still available.
+  function populateSelects(medium, keep) {
+    const genres = W.genresFor(medium).map(([k, g]) => ({ value: k, label: g.label, media: g.media }));
+    const tones = W.tonesFor(medium).map((t) => ({ value: t.name, label: t.name, media: t.media }));
+    $("genre").replaceChildren(...groupedOptions(medium, genres));
+    $("blend").replaceChildren(el("option", { value: "", textContent: "(none)" }), ...groupedOptions(medium, genres));
+    $("tone").replaceChildren(...groupedOptions(medium, tones));
+    if (keep) {
+      setSelect("genre", keep.genre);
+      setSelect("blend", keep.blendGenre || "");
+      setSelect("tone", keep.tone);
+    }
+    updateToneHint();
+  }
+
+  function updateToneHint() {
+    $("tone-hint").textContent = W.toneHint($("tone").value);
   }
 
   function syncSetupUI() {
     const c = project.concept;
     document.querySelector("input[name=medium][value=" + c.medium + "]").checked = true;
-    $("genre").value = c.genre;
-    $("blend").value = c.blendGenre || "";
-    $("tone").value = c.tone;
+    populateSelects(c.medium, c);
+    // Older or imported projects may name a genre or tone this medium lacks.
+    Object.assign(c, { genre: $("genre").value, blendGenre: $("blend").value, tone: $("tone").value });
     $("seed").value = c.seed || "";
     $("title").value = project.title || "";
     $("notes").value = project.notes || "";
@@ -308,10 +340,22 @@
       const s = settingsFromUI();
       Object.assign(project.concept, { medium: s.medium, genre: s.genre, blendGenre: s.blendGenre, tone: s.tone });
       updateMediumUI();
+      updateToneHint();
       renderTropes();
       touch();
     };
-    document.querySelectorAll("input[name=medium]").forEach((r) => r.addEventListener("change", onSetupChange));
+    const onMediumChange = () => {
+      const before = project.concept;
+      const medium = document.querySelector("input[name=medium]:checked").value;
+      populateSelects(medium, before);
+      const changed = [];
+      if ($("genre").value !== before.genre) changed.push("genre");
+      if ($("blend").value !== (before.blendGenre || "")) changed.push("blend");
+      if ($("tone").value !== before.tone) changed.push("tone");
+      onSetupChange();
+      if (changed.length) toast("Your " + changed.join(" and ") + " isn't offered for " + MEDIUM_PLURALS[medium] + ", so it was changed.");
+    };
+    document.querySelectorAll("input[name=medium]").forEach((r) => r.addEventListener("change", onMediumChange));
     ["genre", "blend", "tone"].forEach((id) => $(id).addEventListener("change", onSetupChange));
 
     $("btn-cast").addEventListener("click", () => {
@@ -385,7 +429,7 @@
   }
 
   // ---------- boot ----------
-  populateSelects();
+  populateSelects(document.querySelector("input[name=medium]:checked").value);
   wire();
   const current = loadJSON(CURRENT_KEY, null);
   if (current && current.concept && current.concept.fields) loadProject(current);
