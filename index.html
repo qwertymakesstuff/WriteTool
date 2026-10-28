@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WriteTool: Story Forge</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">WriteTool <span>story forge for games, films &amp; shows</span></div>
+    <div class="project-actions">
+      <select id="project-list" aria-label="Saved projects"></select>
+      <button id="btn-new" type="button">New</button>
+      <button id="btn-save" type="button">Save</button>
+      <button id="btn-delete" type="button" class="danger">Delete</button>
+      <button id="btn-export-md" type="button">Export .md</button>
+      <button id="btn-export-json" type="button">Export .json</button>
+      <label class="button" for="import-file">Import</label>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="setup" aria-label="Story setup">
+      <h2>Setup</h2>
+
+      <fieldset class="medium">
+        <legend>Medium</legend>
+        <label><input type="radio" name="medium" value="film" checked> Film</label>
+        <label><input type="radio" name="medium" value="tv"> TV series</label>
+        <label><input type="radio" name="medium" value="game"> Video game</label>
+      </fieldset>
+
+      <label class="field">Genre
+        <select id="genre"></select>
+      </label>
+      <label class="field">Blend with
+        <select id="blend"></select>
+      </label>
+      <label class="field">Tone
+        <select id="tone"></select>
+      </label>
+      <label class="field" id="episodes-field">Episodes in season 1
+        <input id="episodes" type="number" min="4" max="13" value="8">
+      </label>
+
+      <label class="field">Seed
+        <span class="row">
+          <input id="seed" type="text" spellcheck="false">
+          <button id="btn-dice" type="button" title="New random seed" aria-label="New random seed">🎲</button>
+        </span>
+      </label>
+      <p class="hint">The same seed and settings always give the same story. Share a seed to share a concept.</p>
+
+      <button id="btn-generate" type="button" class="primary">Generate story</button>
+      <p class="hint">Locked fields 🔒 are kept when you generate.</p>
+    </aside>
+
+    <main>
+      <input id="title" class="title-input" type="text" placeholder="Untitled story" aria-label="Story title">
+
+      <section class="logline card">
+        <h3>Logline</h3>
+        <p id="logline"></p>
+      </section>
+
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="bible" aria-selected="true">Story bible</button>
+        <button role="tab" data-tab="cast">Cast</button>
+        <button role="tab" data-tab="outline">Outline</button>
+        <button role="tab" data-tab="originality">Originality</button>
+        <button role="tab" data-tab="notes">Notes</button>
+      </nav>
+
+      <section id="tab-bible" class="tab-panel">
+        <div id="fields" class="fields"></div>
+      </section>
+
+      <section id="tab-cast" class="tab-panel" hidden>
+        <div class="panel-head">
+          <p class="hint">Supporting characters, each with a secret to build subplots around.</p>
+          <button id="btn-cast" type="button">Reroll cast</button>
+        </div>
+        <div id="cast" class="cast"></div>
+      </section>
+
+      <section id="tab-outline" class="tab-panel" hidden>
+        <div class="panel-head">
+          <p class="hint" id="outline-hint"></p>
+          <button id="btn-outline" type="button" class="primary">Build outline from bible</button>
+        </div>
+        <div id="outline"></div>
+      </section>
+
+      <section id="tab-originality" class="tab-panel" hidden>
+        <h3>Trope radar</h3>
+        <p class="hint">Common clichés for your genre, each with a subversion. Use them, twist them, or avoid them on purpose.</p>
+        <div id="tropes" class="tropes"></div>
+        <h3>What-if mutators</h3>
+        <p class="hint">Draw a constraint and apply it to your story. Constraints push stories away from the obvious.</p>
+        <div class="panel-head">
+          <button id="btn-mutators" type="button">Draw 3 mutators</button>
+        </div>
+        <ul id="mutators" class="mutators"></ul>
+      </section>
+
+      <section id="tab-notes" class="tab-panel" hidden>
+        <textarea id="notes" rows="16" placeholder="Free-form notes, scene ideas, dialogue snippets…"></textarea>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "writetool",
+  "version": "0.1.0",
+  "description": "A story and storyline generator for games, films, and TV shows.",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "start": "python3 -m http.server 8000"
+  },
+  "license": "MIT"
+}
